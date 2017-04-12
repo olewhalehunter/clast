@@ -1,0 +1,116 @@
+;;;; -*- Mode: Lisp -*-
+
+;;;; clast.system --
+
+;;;; See file COPYING in main folder for licensing and copyright information.
+
+(mk:defsystem "CLAST"
+  :licence "BSD"
+  :documentation "CLAST is a Common Lisp library that can produce an \"abstract syntax
+tree\" of a \"form\".  Its main use is for source analysis and
+transformation, e.g., extracting the \"free variables\" list from a
+form."
+  :source-extension "lisp"
+  :components ((:file "clast-package")
+
+               (:file "clast-elements"
+                :depends-on ("clast-package"))
+
+               (:module "utilities"
+                :components ("lambda-list-parsing"
+                             "kitchen-sink")
+                :depends-on ("clast-package"))
+
+               (:file "env"
+                :depends-on ("clast-package"))
+
+               (:module "impl-dependent"
+                :depends-on ("clast-elements"
+                             "clast-printing"
+                             "env")
+                :components (
+                             #+ccl
+                             "clast-clozure-cl"
+
+                             #+lispworks
+                             "clast-lispworks"
+                             #+lispworks
+                             "clast-capi-tree"
+
+                             #+allegro
+                             "clast-allegro"
+
+                             #+cmucl
+                             "clast-cmucl"
+
+                             #+sbcl
+                             "clast-sbcl"
+
+                             #-(or ccl lispworks allegro cmucl sbcl)
+                             (:file "clast-missing-cltl2-envs")
+                             )
+                )
+
+               (:file "env-queries"
+                :depends-on ("impl-dependent"))
+               
+               (:file "parse-lambda-lists"
+                :depends-on ("clast-elements" "env" "utilities"))
+               
+               (:file "parse"
+                :depends-on ("parse-lambda-lists"))
+               
+               (:file "parse-defs"
+                :depends-on ("parse"))
+
+               (:file "parse-defstruct"
+                :depends-on ("parse-defs"))
+
+               (:file "parse-defclass"
+                :depends-on ("parse-defs"))
+
+               (:file "parse-loop" ;
+                :depends-on ("parse"))
+          
+               (:file "clast-printing"
+                :depends-on ("parse-defstruct"
+                             "parse-defclass"
+                             "parse-loop"
+                             "parse"))
+
+               (:file "walk"
+                :depends-on ("parse" "parse-loop"))
+
+               (:file "tools"
+                :depends-on ("parse"))
+               )
+  )
+
+(mk:defsystem :clast-tests
+    :licence "BSD"
+    :documentation "Tests for the CLAST library."
+    :depends-on ("CLAST" "FIVEAM")
+    :components ((:module "tests"
+                  :components ((:file "clast-tests-package")
+
+                               (:file "suites"
+                                :depends-on ("clast-tests-package"))
+
+                               (:file "parse-defclass-suite"
+                                :depends-on ("suites"))
+
+                               (:file "parse-defs-suite"
+                                :depends-on ("suites"))
+
+                               (:file "parse-defstruct-suite"
+                                :depends-on ("suites"))
+
+                               (:file "parse-loop-suite"
+                                :depends-on ("suites"))
+
+                               (:file "parse-suite"
+                                :depends-on ("suites"))
+                               )))
+      )
+
+;;;; end of file -- clast.system --
